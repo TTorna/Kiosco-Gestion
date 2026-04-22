@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+model User {
+  id       String @id @default(cuid())
+  username String @unique
+  password String 
+  role     Role   @default(USER)
+  sales    Sale[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  barcode     String?  @unique
+  costPrice   Float
+  sellPrice   Float
+  categories  String[]
+  stock       Int      @default(0)
+  minStock    Int      @default(5)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  saleItems   SaleItem[]
+}
+
+model Sale {
+  id        String     @id @default(cuid())
+  total     Float
+  userId    String
+  user      User       @relation(fields: [userId], references: [id])
+  items     SaleItem[]
+  createdAt DateTime   @default(now())
+}
+
+model SaleItem {
+  id        String   @id @default(cuid())
+  saleId    String
+  sale      Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  name      String
+  price     Float
+  quantity  Int
+  subtotal  Float
+}
