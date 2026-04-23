@@ -15,5 +15,8 @@ RUN npx prisma generate
 
 EXPOSE 3000
 
-# El comando de inicio correrá migraciones, el seed y levantará el entorno de desarrollo
-CMD ["sh", "-c", "npx prisma generate && npx prisma db push && node prisma/seed.js && npm run dev"]
+# Build la app para producción
+RUN npm run build
+
+# Al iniciar: regenerar cliente, aplicar schema, seed (ignora errores si ya existe), y arrancar
+CMD ["sh", "-c", "npx prisma generate && npx prisma db push && node prisma/seed.js || true && npm start"]
