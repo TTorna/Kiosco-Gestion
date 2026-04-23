@@ -25,7 +25,7 @@ export default async function DashboardLayout({
           <div className="h-10 w-10 bg-gradient-to-br from-primary to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
             <PackageOpen className="h-6 w-6 text-white" />
           </div>
-          <span className="font-extrabold text-2xl tracking-tight text-white">Kiosko<span className="text-primary">App</span></span>
+          <span className="font-extrabold text-2xl tracking-tight text-white">Glmodas<span className="text-primary">APP</span></span>
         </div>
 
         <nav className="flex-1 px-4 space-y-2 overflow-y-auto flex md:flex-col overflow-x-auto md:overflow-x-visible">

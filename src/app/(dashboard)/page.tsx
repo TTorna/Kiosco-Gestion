@@ -1,10 +1,11 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
-import { TrendingUp, Users, PackageX, DollarSign } from "lucide-react"
+import { TrendingUp, Users, PackageX, DollarSign, ArrowUpRight, ArrowDownRight } from "lucide-react"
 import { prisma } from "@/lib/prisma"
+import { DashboardCharts } from "@/components/dashboard/DashboardCharts"
 
 export const metadata = {
-  title: 'Dashboard - Kiosko App'
+  title: 'Dashboard - Glmodas APP'
 }
 
 export default async function DashboardPage() {
@@ -14,7 +15,6 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
-  // Si no es admin, redirigir a caja
   if (session.user.role !== "ADMIN") {
     redirect('/pos')
   }
@@ -23,14 +23,27 @@ export default async function DashboardPage() {
   today.setHours(0, 0, 0, 0)
   const yesterday = new Date(today)
   yesterday.setDate(yesterday.getDate() - 1)
+  
+  const sevenDaysAgo = new Date(today)
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
+
+  const thirtyDaysAgo = new Date(today)
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+  const sixtyDaysAgo = new Date(today)
+  sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60)
 
   let salesToday = 0
   let customersToday = 0
   let salesYesterday = 0
   let lowStockItems = 0
+  let salesLastMonth = 0
+  let salesPrevMonth = 0
+  let dailyData: any[] = []
+  let topProducts: any[] = []
+  let categoryData: any[] = []
 
   try {
-    // Ventas de hoy
+    // 1. Estadísticas básicas
     const salesTodayAggr = await prisma.sale.aggregate({
       _sum: { total: true },
       _count: { id: true },
@@ -39,106 +52,165 @@ export default async function DashboardPage() {
     salesToday = salesTodayAggr._sum.total || 0
     customersToday = salesTodayAggr._count.id || 0
 
-    // Ventas de ayer
     const salesYesterdayAggr = await prisma.sale.aggregate({
       _sum: { total: true },
       where: { createdAt: { gte: yesterday, lt: today } }
     })
     salesYesterday = salesYesterdayAggr._sum.total || 0
 
-    // Productos con bajo stock (compara dos columnas con raw query)
+    // Últimos 30 días
+    const lastMonthAggr = await prisma.sale.aggregate({
+      _sum: { total: true },
+      where: { createdAt: { gte: thirtyDaysAgo } }
+    })
+    salesLastMonth = lastMonthAggr._sum.total || 0
+
+    // Los 30 días anteriores a esos (para comparar)
+    const prevMonthAggr = await prisma.sale.aggregate({
+      _sum: { total: true },
+      where: { createdAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo } }
+    })
+    salesPrevMonth = prevMonthAggr._sum.total || 0
+
     const lowStockResult = await prisma.$queryRaw<{ count: bigint }[]>`
       SELECT COUNT(*)::int as count FROM "Product" WHERE stock <= "minStock"
     `
     lowStockItems = Number(lowStockResult[0]?.count ?? 0)
+
+    // 2. Datos para el gráfico de 7 días
+    const salesLast7Days = await prisma.sale.findMany({
+      where: { createdAt: { gte: sevenDaysAgo } },
+      orderBy: { createdAt: 'asc' }
+    })
+
+    // Agrupar por día
+    const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+    const dailyMap = new Map()
+    
+    // Inicializar los 7 días
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(sevenDaysAgo)
+      d.setDate(d.getDate() + i)
+      const dateStr = d.toISOString().split('T')[0]
+      dailyMap.set(dateStr, {
+        name: dayNames[d.getDay()],
+        revenue: 0,
+        transactions: 0
+      })
+    }
+
+    salesLast7Days.forEach(sale => {
+      const dateStr = sale.createdAt.toISOString().split('T')[0]
+      if (dailyMap.has(dateStr)) {
+        const current = dailyMap.get(dateStr)
+        current.revenue += sale.total
+        current.transactions += 1
+      }
+    })
+    dailyData = Array.from(dailyMap.values())
+
+    // 3. Productos más vendidos
+    const topSales = await prisma.saleItem.groupBy({
+      by: ['name'],
+      _sum: { quantity: true },
+      orderBy: { _sum: { quantity: 'desc' } },
+      take: 5
+    })
+    topProducts = topSales.map(s => ({
+      name: s.name,
+      value: s._sum.quantity || 0
+    }))
+
+    // 4. Distribución por categoría (Stock)
+    const allProducts = await prisma.product.findMany({
+      select: { categories: true, stock: true }
+    })
+    
+    const catMap = new Map()
+    allProducts.forEach(p => {
+      const cats = p.categories && p.categories.length > 0 ? p.categories : ['Sin Categoría']
+      cats.forEach(cat => {
+        catMap.set(cat, (catMap.get(cat) || 0) + 1)
+      })
+    })
+    categoryData = Array.from(catMap.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6)
+
   } catch (e) {
     console.error('Dashboard stats error:', e)
   }
 
-  const stats = { salesToday, salesYesterday, customersToday, lowStockItems }
-
-  const growth = stats.salesYesterday > 0
-    ? ((stats.salesToday - stats.salesYesterday) / stats.salesYesterday) * 100
-    : (stats.salesToday > 0 ? 100 : 0)
-
+  const growth = salesYesterday > 0
+    ? ((salesToday - salesYesterday) / salesYesterday) * 100
+    : (salesToday > 0 ? 100 : 0)
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-10">
       <div>
-        <h1 className="text-3xl font-extrabold text-white tracking-tight">Dashboard General</h1>
-        <p className="text-zinc-400 mt-2">Resumen de ventas y estadísticas de tu negocio.</p>
+        <h1 className="text-4xl font-black text-white tracking-tight">Dashboard</h1>
+        <p className="text-zinc-400 mt-1">Análisis detallado de movimientos y rendimiento.</p>
       </div>
 
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Ingresos Hoy */}
-        <div className="glass rounded-2xl p-6 border border-white/5 relative overflow-hidden group">
+        <div className="glass rounded-2xl p-6 border border-white/5 relative overflow-hidden group hover:border-emerald-500/30 transition-all">
           <div className="absolute -right-4 -top-4 h-24 w-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-colors" />
-          <div className="flex items-center gap-4 mb-4">
-            <div className="h-12 w-12 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 shadow-inner">
-              <DollarSign className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-zinc-400">Ingresos Hoy</p>
-              <h3 className="text-2xl font-bold text-white">${stats.salesToday.toLocaleString('es-AR')}</h3>
+          <p className="text-sm font-medium text-zinc-400 mb-1">Ingresos Hoy</p>
+          <div className="flex items-end gap-3">
+            <h3 className="text-3xl font-bold text-white">${salesToday.toLocaleString('es-AR')}</h3>
+            <div className={`flex items-center text-xs font-bold mb-1 ${growth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {growth >= 0 ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
+              {Math.abs(growth).toFixed(1)}%
             </div>
           </div>
-          <div className="flex items-center gap-2 text-sm">
-            <span className={`font-semibold ${growth >= 0 ? 'text-emerald-400' : 'text-destructive'}`}>
-              {growth >= 0 ? '+' : ''}{growth.toFixed(1)}%
-            </span>
-            <span className="text-zinc-500">vs ayer</span>
+          <div className="h-1 w-full bg-zinc-800 rounded-full mt-4 overflow-hidden">
+            <div className="h-full bg-emerald-500 transition-all duration-1000" style={{ width: `${Math.min(100, Math.max(10, growth + 50))}%` }} />
           </div>
         </div>
 
-        {/* Clientes Hoy */}
-        <div className="glass rounded-2xl p-6 border border-white/5 relative overflow-hidden group">
+        <div className="glass rounded-2xl p-6 border border-white/5 relative overflow-hidden group hover:border-blue-500/30 transition-all">
           <div className="absolute -right-4 -top-4 h-24 w-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-colors" />
-          <div className="flex items-center gap-4 mb-4">
-            <div className="h-12 w-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 shadow-inner">
-              <Users className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-zinc-400">Transacciones Hoy</p>
-              <h3 className="text-2xl font-bold text-white">{stats.customersToday}</h3>
-            </div>
-          </div>
+          <p className="text-sm font-medium text-zinc-400 mb-1">Transacciones</p>
+          <h3 className="text-3xl font-bold text-white">{customersToday}</h3>
+          <p className="text-xs text-zinc-500 mt-2">Ventas realizadas en las últimas 24hs</p>
         </div>
 
-        {/* Alertas Stock */}
-        <div className="glass rounded-2xl p-6 border border-white/5 relative overflow-hidden group">
+        <div className="glass rounded-2xl p-6 border border-white/5 relative overflow-hidden group hover:border-orange-500/30 transition-all">
           <div className="absolute -right-4 -top-4 h-24 w-24 bg-orange-500/10 rounded-full blur-2xl group-hover:bg-orange-500/20 transition-colors" />
-          <div className="flex items-center gap-4 mb-4">
-            <div className="h-12 w-12 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-400 shadow-inner">
-              <PackageX className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-zinc-400">Bajo Stock</p>
-              <h3 className="text-2xl font-bold text-white">{stats.lowStockItems} productos</h3>
-            </div>
-          </div>
+          <p className="text-sm font-medium text-zinc-400 mb-1">Alertas Stock</p>
+          <h3 className="text-3xl font-bold text-white">{lowStockItems}</h3>
+          <p className={`text-xs mt-2 font-medium ${lowStockItems > 0 ? 'text-orange-400' : 'text-emerald-400'}`}>
+            {lowStockItems > 0 ? 'Requieren reposición inmediata' : 'Todo el stock está al día'}
+          </p>
         </div>
         
-        {/* Rendimiento Semanal */}
-        <div className="glass rounded-2xl p-6 border border-white/5 relative overflow-hidden group">
+        <div className="glass rounded-2xl p-6 border border-white/5 relative overflow-hidden group hover:border-primary/30 transition-all">
           <div className="absolute -right-4 -top-4 h-24 w-24 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors" />
-          <div className="flex items-center gap-4 mb-4">
-            <div className="h-12 w-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shadow-inner">
-              <TrendingUp className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-zinc-400">Tendencia Semanal</p>
-              <h3 className="text-2xl font-bold text-white">Positiva</h3>
-            </div>
+          <p className="text-sm font-medium text-zinc-400 mb-1">Ingresos Último Mes</p>
+          <div className="flex items-end gap-3">
+            <h3 className="text-3xl font-bold text-white">${salesLastMonth.toLocaleString('es-AR')}</h3>
+            {salesPrevMonth > 0 && (() => {
+              const monthGrowth = ((salesLastMonth - salesPrevMonth) / salesPrevMonth) * 100
+              return (
+                <div className={`flex items-center text-xs font-bold mb-1 ${monthGrowth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {monthGrowth >= 0 ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
+                  {Math.abs(monthGrowth).toFixed(1)}%
+                </div>
+              )
+            })()}
           </div>
+          <p className="text-xs text-zinc-500 mt-2">vs mes anterior</p>
         </div>
       </div>
       
-      {/* Placeholder para gráfico futuro */}
-      <div className="glass rounded-2xl p-8 border border-white/5 h-96 flex items-center justify-center flex-col text-center">
-        <TrendingUp className="h-16 w-16 text-zinc-700 mb-4" />
-        <h3 className="text-xl font-bold text-zinc-500">Gráfico de Ventas Semanales</h3>
-        <p className="text-zinc-600 mt-2">Aquí implementaremos un gráfico interactivo con Recharts próximamente.</p>
-      </div>
+      {/* Charts Section */}
+      <DashboardCharts 
+        dailyData={dailyData} 
+        topProducts={topProducts} 
+        categoryData={categoryData} 
+      />
     </div>
   )
 }

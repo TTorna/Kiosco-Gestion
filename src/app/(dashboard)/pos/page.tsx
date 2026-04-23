@@ -3,7 +3,7 @@ import POSClient from "@/components/pos/POSClient"
 import { prisma } from "@/lib/prisma"
 
 export const metadata = {
-  title: 'Caja - Kiosko App'
+  title: 'Caja - Glmodas APP'
 }
 
 export default async function POSPage() {

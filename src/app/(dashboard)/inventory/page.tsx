@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth"
 import InventoryClient from "./InventoryClient"
 
 export const metadata = {
-  title: 'Inventario - Kiosko App'
+  title: 'Inventario - Glmodas APP'
 }
 
 export default async function InventoryPage() {

@@ -193,7 +193,7 @@ export default function POSClient({ initialProducts }: POSClientProps) {
               >
                 {/* Ticket content (also used for printing) */}
                 <div className="ticket-header" style={{ textAlign: 'center', marginBottom: 10 }}>
-                  <h1 style={{ fontSize: 18, fontWeight: 'bold', letterSpacing: 2 }}>KIOSKO APP</h1>
+                  <h1 style={{ fontSize: 18, fontWeight: 'bold', letterSpacing: 2 }}>GLMODAS APP</h1>
                   <p style={{ fontSize: 10, color: '#555' }}>Sistema de Gestión</p>
                   <p style={{ fontSize: 10, color: '#555' }}>
                     {ticket.date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
