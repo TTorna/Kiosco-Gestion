@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Process sale using Prisma transaction to ensure atomicity
-    const sale = await prisma.$transaction(async (tx) => {
+    const sale = await prisma.$transaction(async (tx: any) => {
       
       // 1. Create the sale
       const newSale = await tx.sale.create({
