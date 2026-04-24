@@ -99,7 +99,7 @@ export default async function DashboardPage() {
       })
     }
 
-    salesLast7Days.forEach(sale => {
+    salesLast7Days.forEach((sale: any) => {
       const dateStr = sale.createdAt.toISOString().split('T')[0]
       if (dailyMap.has(dateStr)) {
         const current = dailyMap.get(dateStr)
@@ -116,7 +116,7 @@ export default async function DashboardPage() {
       orderBy: { _sum: { quantity: 'desc' } },
       take: 5
     })
-    topProducts = topSales.map(s => ({
+    topProducts = topSales.map((s: any) => ({
       name: s.name,
       value: s._sum.quantity || 0
     }))
@@ -127,9 +127,9 @@ export default async function DashboardPage() {
     })
     
     const catMap = new Map()
-    allProducts.forEach(p => {
+    allProducts.forEach((p: any) => {
       const cats = p.categories && p.categories.length > 0 ? p.categories : ['Sin Categoría']
-      cats.forEach(cat => {
+      cats.forEach((cat: any) => {
         catMap.set(cat, (catMap.get(cat) || 0) + 1)
       })
     })
