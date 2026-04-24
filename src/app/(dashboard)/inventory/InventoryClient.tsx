@@ -410,6 +410,7 @@ function InventoryClientInner({ userRole }: { userRole: "ADMIN" | "USER" }) {
           </div>
           <ProductForm
             initialData={editingProduct}
+            existingCategories={allCategories}
             onSubmit={handleSubmit}
             onCancel={() => { setShowForm(false); setEditingProduct(undefined) }}
           />

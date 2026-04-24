@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
-import { auth } from "@/lib/auth"
 import { PackageOpen, LayoutDashboard, ShoppingCart, LogOut, Package } from "lucide-react"
+import { auth, signOut } from "@/lib/auth"
 import Link from "next/link"
 
 export default async function DashboardLayout({
@@ -51,7 +51,10 @@ export default async function DashboardLayout({
               <span className="text-sm font-semibold text-white">{session.user.name}</span>
               <span className="text-xs text-primary font-medium">{session.user.role}</span>
             </div>
-            <form action="/api/auth/signout" method="POST">
+            <form action={async () => {
+                'use server'
+                await signOut({ redirectTo: '/login' })
+              }}>
               <button type="submit" className="text-zinc-400 hover:text-white transition-colors h-10 w-10 flex items-center justify-center rounded-xl hover:bg-white/10">
                 <LogOut className="h-5 w-5" />
               </button>

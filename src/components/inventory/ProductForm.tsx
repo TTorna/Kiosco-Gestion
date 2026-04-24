@@ -30,11 +30,12 @@ export type ProductFormValues = z.infer<typeof productSchema>
 
 interface ProductFormProps {
   initialData?: Product
+  existingCategories?: string[]
   onSubmit: (data: ProductFormValues) => void
   onCancel: () => void
 }
 
-export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProps) {
+export function ProductForm({ initialData, existingCategories = [], onSubmit, onCancel }: ProductFormProps) {
   const [customCategory, setCustomCategory] = useState('')
 
   const {
@@ -180,7 +181,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
 
         {/* Chips de categorías preset */}
         <div className="flex flex-wrap gap-2">
-          {PRESET_CATEGORIES.map(cat => {
+          {Array.from(new Set([...PRESET_CATEGORIES, ...existingCategories])).sort().map(cat => {
             const isSelected = selectedCategories.includes(cat)
             return (
               <button
