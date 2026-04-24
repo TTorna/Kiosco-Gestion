@@ -54,7 +54,7 @@ export function ProductTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {products.map((product) => {
+          {products.map((product: Product) => {
             const isCritical = product.stock <= product.minStock;
             
             return (
@@ -78,7 +78,7 @@ export function ProductTable({
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
-                    {product.categories?.map(cat => (
+                    {product.categories?.map((cat: string) => (
                       <Badge key={cat} variant="outline" className="bg-white/5 border-white/10 text-zinc-300 text-xs">
                         {cat}
                       </Badge>

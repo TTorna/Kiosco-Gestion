@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
         const to = new Date(from)
         to.setHours(23, 59, 59, 999)
 
-        const agg = await prisma.sale.aggregate({
+        const agg: any = await prisma.sale.aggregate({
           _sum: { total: true },
           _count: { id: true },
           where: { createdAt: { gte: from, lte: to } }
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
         to.setDate(to.getDate() + 6)
         to.setHours(23, 59, 59, 999)
 
-        const agg = await prisma.sale.aggregate({
+        const agg: any = await prisma.sale.aggregate({
           _sum: { total: true },
           _count: { id: true },
           where: { createdAt: { gte: from, lte: to } }
@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
         const from = new Date(now.getFullYear(), now.getMonth() - i, 1, 0, 0, 0, 0)
         const to = new Date(from.getFullYear(), from.getMonth() + 1, 0, 23, 59, 59, 999)
 
-        const agg = await prisma.sale.aggregate({
+        const agg: any = await prisma.sale.aggregate({
           _sum: { total: true },
           _count: { id: true },
           where: { createdAt: { gte: from, lte: to } }
@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
         const from = new Date(year, 0, 1, 0, 0, 0, 0)
         const to = new Date(year, 11, 31, 23, 59, 59, 999)
 
-        const agg = await prisma.sale.aggregate({
+        const agg: any = await prisma.sale.aggregate({
           _sum: { total: true },
           _count: { id: true },
           where: { createdAt: { gte: from, lte: to } }

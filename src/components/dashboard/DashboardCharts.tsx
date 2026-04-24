@@ -48,8 +48,8 @@ export function DashboardCharts({ dailyData, topProducts, categoryData }: Dashbo
     }
     setLoading(true)
     fetch(`/api/dashboard/revenue?period=${period}`)
-      .then(r => r.json())
-      .then(data => setChartData(data))
+      .then((r: any) => r.json())
+      .then((data: any) => setChartData(data))
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [period, dailyData])
@@ -69,7 +69,7 @@ export function DashboardCharts({ dailyData, topProducts, categoryData }: Dashbo
 
           {/* Period selector */}
           <div className="flex gap-1 bg-zinc-900/70 border border-white/5 rounded-xl p-1">
-            {PERIOD_OPTIONS.map(opt => (
+            {PERIOD_OPTIONS.map((opt: any) => (
               <button
                 key={opt.value}
                 onClick={() => setPeriod(opt.value)}
@@ -221,7 +221,7 @@ export function DashboardCharts({ dailyData, topProducts, categoryData }: Dashbo
                 dataKey="value"
                 stroke="none"
               >
-                {categoryData.map((_, index) => (
+                {categoryData.map((_: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
@@ -231,7 +231,7 @@ export function DashboardCharts({ dailyData, topProducts, categoryData }: Dashbo
             </PieChart>
           </ResponsiveContainer>
           <div className="flex flex-col gap-2">
-            {categoryData.slice(0, 5).map((cat, i) => (
+            {categoryData.slice(0, 5).map((cat: any, i: number) => (
               <div key={cat.name} className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
                 <span className="text-xs text-zinc-400 truncate max-w-[100px]">{cat.name}</span>

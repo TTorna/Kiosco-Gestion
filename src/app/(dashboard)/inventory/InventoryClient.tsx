@@ -42,7 +42,7 @@ function InventoryClientInner({ userRole }: { userRole: "ADMIN" | "USER" }) {
   // Extract all unique categories across all products
   const allCategories = useMemo(() => {
     const cats = new Set<string>()
-    products.forEach(p => p.categories?.forEach(c => cats.add(c)))
+    products.forEach((p: any) => p.categories?.forEach((c: any) => cats.add(c)))
     return Array.from(cats).sort()
   }, [products])
 
@@ -67,8 +67,8 @@ function InventoryClientInner({ userRole }: { userRole: "ADMIN" | "USER" }) {
   }, [products, selectedCategories, searchQuery, showLowStock])
 
   const toggleCategory = (cat: string) => {
-    setSelectedCategories(prev =>
-      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+    setSelectedCategories((prev: string[]) =>
+      prev.includes(cat) ? prev.filter((c: string) => c !== cat) : [...prev, cat]
     )
   }
 

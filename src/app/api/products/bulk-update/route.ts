@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     // Update each product in a transaction
     await prisma.$transaction(
-      products.map(p => {
+      products.map((p: any) => {
         const data: Record<string, number> = {}
         if (field === 'sellPrice' || field === 'both') {
           data.sellPrice = Math.round(p.sellPrice * multiplier * 100) / 100

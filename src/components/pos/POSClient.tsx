@@ -38,18 +38,18 @@ export default function POSClient({ initialProducts }: POSClientProps) {
   const ticketRef = useRef<HTMLDivElement>(null)
 
   const handleScan = (barcode: string) => {
-    const product = products.find(p =>
+    const product = products.find((p: any) =>
       (p.barcode && p.barcode === barcode) || p.name.toLowerCase().includes(barcode.toLowerCase())
     )
 
     if (product) {
       if (product.stock <= 0) { alert(`Sin stock: ${product.name}`); return }
 
-      setCart(prev => {
-        const existing = prev.find(i => i.id === product.id)
+      setCart((prev: any[]) => {
+        const existing = prev.find((i: any) => i.id === product.id)
         if (existing) {
           if (existing.quantity >= product.stock) { alert(`Stock máximo: ${product.stock}`); return prev }
-          return prev.map(i =>
+          return prev.map((i: any) =>
             i.id === product.id
               ? { ...i, quantity: i.quantity + 1, subtotal: (i.quantity + 1) * i.sellPrice }
               : i
@@ -63,7 +63,7 @@ export default function POSClient({ initialProducts }: POSClientProps) {
   }
 
   const updateQuantity = (id: string, delta: number) => {
-    setCart(prev => prev.flatMap(item => {
+    setCart((prev: any[]) => prev.flatMap((item: any) => {
       if (item.id !== id) return [item]
       const newQty = item.quantity + delta
       if (newQty <= 0) return []
@@ -85,7 +85,7 @@ export default function POSClient({ initialProducts }: POSClientProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: cart.map(i => ({ id: i.id, name: i.name, price: i.sellPrice, quantity: i.quantity, subtotal: i.subtotal })),
+          items: cart.map((i: any) => ({ id: i.id, name: i.name, price: i.sellPrice, quantity: i.quantity, subtotal: i.subtotal })),
           total
         })
       })
