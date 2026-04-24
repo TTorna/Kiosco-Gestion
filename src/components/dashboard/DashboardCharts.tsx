@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, Loader2
+  LineChart, Line, PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts'
 import { Loader2 as LoaderIcon } from 'lucide-react'
 
