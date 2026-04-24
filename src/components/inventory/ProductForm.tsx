@@ -11,11 +11,9 @@ import { Product } from './ProductTable'
 import { Save, X, Plus, Tag } from 'lucide-react'
 
 const PRESET_CATEGORIES = [
-  'Bebidas', 'Gaseosas', 'Aguas', 'Jugos', 'Cervezas', 'Vinos',
-  'Snacks', 'Golosinas', 'Galletitas', 'Chocolates',
-  'Lácteos', 'Fiambres', 'Congelados',
-  'Limpieza', 'Higiene', 'Cigarrillos',
-  'Panadería', 'Enlatados', 'Condimentos',
+  'Aguas', 'Bebidas', 'Cervezas', 'Cigarrillos', 'Chocolates', 'Condimentos', 
+  'Congelados', 'Enlatados', 'Fiambres', 'Galletitas', 'Gaseosas', 'Golosinas', 
+  'Higiene', 'Jugos', 'Lácteos', 'Limpieza', 'Panadería', 'Snacks', 'Vinos',
 ]
 
 const productSchema = z.object({
@@ -61,21 +59,30 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
 
   const selectedCategories = watch('categories') || []
 
+  // Función para normalizar texto: "bebiDas" -> "Bebidas"
+  const normalizeCategory = (cat: string) => {
+    const trimmed = cat.trim()
+    if (!trimmed) return ""
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase()
+  }
+
+
   const toggleCategory = (cat: string) => {
+    const normalized = normalizeCategory(cat)
     const current = getValues('categories') || []
-    if (current.includes(cat)) {
-      setValue('categories', current.filter(c => c !== cat), { shouldValidate: true })
+    if (current.includes(normalized)) {
+      setValue('categories', current.filter((c: string) => c !== normalized), { shouldValidate: true })
     } else {
-      setValue('categories', [...current, cat], { shouldValidate: true })
+      setValue('categories', [...current, normalized], { shouldValidate: true })
     }
   }
 
   const addCustomCategory = () => {
-    const trimmed = customCategory.trim()
-    if (!trimmed) return
+    const normalized = normalizeCategory(customCategory)
+    if (!normalized) return
     const current = getValues('categories') || []
-    if (!current.includes(trimmed)) {
-      setValue('categories', [...current, trimmed], { shouldValidate: true })
+    if (!current.includes(normalized)) {
+      setValue('categories', [...current, normalized], { shouldValidate: true })
     }
     setCustomCategory('')
   }
