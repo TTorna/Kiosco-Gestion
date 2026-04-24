@@ -15,7 +15,7 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
-  if (session.user.role !== "ADMIN") {
+  if ((session.user as any).role !== "ADMIN") {
     redirect('/pos')
   }
 
