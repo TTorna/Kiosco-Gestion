@@ -12,9 +12,25 @@ export function ScanInput({ onScan }: ScanInputProps) {
   const [value, setValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Auto-focus para estar siempre listo para el escáner (si se necesita)
+  // Auto-focus inteligente para estar siempre listo para el escáner
   useEffect(() => {
-    // Si queremos que siempre esté enfocado: inputRef.current?.focus()
+    // Focus inicial
+    inputRef.current?.focus()
+
+    // Si el usuario empieza a escribir en cualquier lado de la pantalla,
+    // movemos el foco al input automáticamente (excepto si está en otro input)
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (
+        document.activeElement?.tagName !== 'INPUT' && 
+        document.activeElement?.tagName !== 'TEXTAREA' &&
+        !e.ctrlKey && !e.altKey && !e.metaKey
+      ) {
+        inputRef.current?.focus()
+      }
+    }
+
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
   }, [])
 
   const handleSubmit = (e: React.FormEvent) => {

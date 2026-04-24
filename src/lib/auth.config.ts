@@ -15,10 +15,10 @@ export const authConfig = {
 
         // --- ACCESO DE EMERGENCIA HARDCODEADO ---
         if (userStr === 'admin' && passStr === 'gladmin') {
-          return { id: 'admin-fixed', name: 'Admin Glmodas', role: 'ADMIN' }
+          return { id: 'cmo912nnb000028rvmkm20qog', name: 'Admin Glmodas', role: 'ADMIN' }
         }
         if (userStr === 'user' && passStr === 'user123') {
-          return { id: 'user-fixed', name: 'Usuario Caja', role: 'USER' }
+          return { id: 'cmo912nnu000128rvvuje801r', name: 'Usuario Caja', role: 'USER' }
         }
         return null
       }
