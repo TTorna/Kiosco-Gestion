@@ -20,6 +20,7 @@ export default async function POSPage() {
       name: true,
       barcode: true,
       sellPrice: true,
+      costPrice: true,
       stock: true
     }
   })

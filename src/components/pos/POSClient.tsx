@@ -10,6 +10,7 @@ interface POSProduct {
   name: string
   barcode: string | null
   sellPrice: number
+  costPrice: number
   stock: number
 }
 
@@ -85,7 +86,14 @@ export default function POSClient({ initialProducts }: POSClientProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: cart.map((i: any) => ({ id: i.id, name: i.name, price: i.sellPrice, quantity: i.quantity, subtotal: i.subtotal })),
+          items: cart.map((i: any) => ({ 
+            id: i.id, 
+            name: i.name, 
+            price: i.sellPrice, 
+            costPrice: i.costPrice,
+            quantity: i.quantity, 
+            subtotal: i.subtotal 
+          })),
           total
         })
       })

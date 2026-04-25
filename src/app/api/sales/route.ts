@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
               productId: item.id,
               name: item.name,
               price: item.price,
+              costPrice: item.costPrice || 0,
               quantity: item.quantity,
               subtotal: item.subtotal
             }))

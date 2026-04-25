@@ -51,6 +51,7 @@ model SaleItem {
   product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   name      String
   price     Float
+  costPrice Float    @default(0)
   quantity  Int
   subtotal  Float
 }

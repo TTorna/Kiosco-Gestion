@@ -80,6 +80,7 @@ export default async function DashboardPage() {
     // 2. Datos para el gráfico de 7 días
     const salesLast7Days = await prisma.sale.findMany({
       where: { createdAt: { gte: sevenDaysAgo } },
+      include: { items: true },
       orderBy: { createdAt: 'asc' }
     })
 
@@ -95,6 +96,7 @@ export default async function DashboardPage() {
       dailyMap.set(dateStr, {
         name: dayNames[d.getDay()],
         revenue: 0,
+        profit: 0,
         transactions: 0
       })
     }
@@ -105,9 +107,20 @@ export default async function DashboardPage() {
         const current = dailyMap.get(dateStr)
         current.revenue += sale.total
         current.transactions += 1
+        
+        sale.items.forEach((item: any) => {
+          const cost = item.costPrice ?? 0
+          current.profit += (item.price - cost) * item.quantity
+        })
       }
     })
-    dailyData = Array.from(dailyMap.values())
+    
+    // Redondear valores
+    dailyData = Array.from(dailyMap.values()).map(d => ({
+      ...d,
+      revenue: Math.round(d.revenue * 100) / 100,
+      profit: Math.round(d.profit * 100) / 100
+    }))
 
     // 3. Productos más vendidos
     const topSales = await prisma.saleItem.groupBy({

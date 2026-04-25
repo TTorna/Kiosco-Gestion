@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
 
     const period = req.nextUrl.searchParams.get('period') ?? '7d'
     const now = new Date()
-    const data: { name: string; revenue: number; transactions: number }[] = []
+    const data: { name: string; revenue: number; profit: number; transactions: number }[] = []
 
     if (period === '7d') {
       // Last 7 days grouped by day
@@ -20,17 +20,27 @@ export async function GET(req: NextRequest) {
         const to = new Date(from)
         to.setHours(23, 59, 59, 999)
 
-        const agg: any = await prisma.sale.aggregate({
-          _sum: { total: true },
-          _count: { id: true },
-          where: { createdAt: { gte: from, lte: to } }
+        const sales = await prisma.sale.findMany({
+          where: { createdAt: { gte: from, lte: to } },
+          include: { items: true }
+        })
+
+        let revenue = 0
+        let profit = 0
+        sales.forEach(sale => {
+          revenue += sale.total
+          sale.items.forEach(item => {
+            const cost = item.costPrice ?? 0
+            profit += (item.price - cost) * item.quantity
+          })
         })
 
         const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
         data.push({
           name: dayNames[from.getDay()],
-          revenue: Math.round((agg._sum.total ?? 0) * 100) / 100,
-          transactions: agg._count.id ?? 0
+          revenue: Math.round(revenue * 100) / 100,
+          profit: Math.round(profit * 100) / 100,
+          transactions: sales.length
         })
       }
 
@@ -44,18 +54,28 @@ export async function GET(req: NextRequest) {
         to.setDate(to.getDate() + 6)
         to.setHours(23, 59, 59, 999)
 
-        const agg: any = await prisma.sale.aggregate({
-          _sum: { total: true },
-          _count: { id: true },
-          where: { createdAt: { gte: from, lte: to } }
+        const sales = await prisma.sale.findMany({
+          where: { createdAt: { gte: from, lte: to } },
+          include: { items: true }
+        })
+
+        let revenue = 0
+        let profit = 0
+        sales.forEach(sale => {
+          revenue += sale.total
+          sale.items.forEach(item => {
+            const cost = item.costPrice ?? 0
+            profit += (item.price - cost) * item.quantity
+          })
         })
 
         const weekNum = Math.ceil((from.getDate()) / 7)
         const monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
         data.push({
           name: `S${weekNum} ${monthNames[from.getMonth()]}`,
-          revenue: Math.round((agg._sum.total ?? 0) * 100) / 100,
-          transactions: agg._count.id ?? 0
+          revenue: Math.round(revenue * 100) / 100,
+          profit: Math.round(profit * 100) / 100,
+          transactions: sales.length
         })
       }
 
@@ -66,16 +86,26 @@ export async function GET(req: NextRequest) {
         const from = new Date(now.getFullYear(), now.getMonth() - i, 1, 0, 0, 0, 0)
         const to = new Date(from.getFullYear(), from.getMonth() + 1, 0, 23, 59, 59, 999)
 
-        const agg: any = await prisma.sale.aggregate({
-          _sum: { total: true },
-          _count: { id: true },
-          where: { createdAt: { gte: from, lte: to } }
+        const sales = await prisma.sale.findMany({
+          where: { createdAt: { gte: from, lte: to } },
+          include: { items: { include: { product: { select: { costPrice: true } } } } }
+        })
+
+        let revenue = 0
+        let profit = 0
+        sales.forEach(sale => {
+          revenue += sale.total
+          sale.items.forEach(item => {
+            const cost = item.product?.costPrice ?? 0
+            profit += (item.price - cost) * item.quantity
+          })
         })
 
         data.push({
           name: monthNames[from.getMonth()],
-          revenue: Math.round((agg._sum.total ?? 0) * 100) / 100,
-          transactions: agg._count.id ?? 0
+          revenue: Math.round(revenue * 100) / 100,
+          profit: Math.round(profit * 100) / 100,
+          transactions: sales.length
         })
       }
 
@@ -86,16 +116,26 @@ export async function GET(req: NextRequest) {
         const from = new Date(year, 0, 1, 0, 0, 0, 0)
         const to = new Date(year, 11, 31, 23, 59, 59, 999)
 
-        const agg: any = await prisma.sale.aggregate({
-          _sum: { total: true },
-          _count: { id: true },
-          where: { createdAt: { gte: from, lte: to } }
+        const sales = await prisma.sale.findMany({
+          where: { createdAt: { gte: from, lte: to } },
+          include: { items: { include: { product: { select: { costPrice: true } } } } }
+        })
+
+        let revenue = 0
+        let profit = 0
+        sales.forEach(sale => {
+          revenue += sale.total
+          sale.items.forEach(item => {
+            const cost = item.product?.costPrice ?? 0
+            profit += (item.price - cost) * item.quantity
+          })
         })
 
         data.push({
           name: String(year),
-          revenue: Math.round((agg._sum.total ?? 0) * 100) / 100,
-          transactions: agg._count.id ?? 0
+          revenue: Math.round(revenue * 100) / 100,
+          profit: Math.round(profit * 100) / 100,
+          transactions: sales.length
         })
       }
     }

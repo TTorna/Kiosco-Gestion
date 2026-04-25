@@ -10,6 +10,7 @@ import { Loader2 as LoaderIcon } from 'lucide-react'
 interface ChartData {
   name: string
   revenue: number
+  profit: number
   transactions: number
 }
 
@@ -98,6 +99,10 @@ export function DashboardCharts({ dailyData, topProducts, categoryData }: Dashbo
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                 </linearGradient>
+                <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                </linearGradient>
                 <linearGradient id="colorTx" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.2}/>
                   <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
@@ -131,7 +136,7 @@ export function DashboardCharts({ dailyData, topProducts, categoryData }: Dashbo
                 contentStyle={{ backgroundColor: '#09090b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
                 itemStyle={{ color: '#fff' }}
                 formatter={(value: number, name: string) =>
-                  name === 'Ingresos' ? [`$${value.toFixed(2)}`, name] : [value, name]
+                  (name === 'Ingresos' || name === 'Ganancias') ? [`$${value.toLocaleString('es-AR')}`, name] : [value, name]
                 }
               />
               <Area
@@ -143,6 +148,16 @@ export function DashboardCharts({ dailyData, topProducts, categoryData }: Dashbo
                 fillOpacity={1}
                 fill="url(#colorRev)"
                 name="Ingresos"
+              />
+              <Area
+                yAxisId="left"
+                type="monotone"
+                dataKey="profit"
+                stroke="#3b82f6"
+                strokeWidth={3}
+                fillOpacity={1}
+                fill="url(#colorProfit)"
+                name="Ganancias"
               />
               <Area
                 yAxisId="right"
@@ -164,6 +179,10 @@ export function DashboardCharts({ dailyData, topProducts, categoryData }: Dashbo
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-emerald-500" />
             <span className="text-xs text-zinc-400">Ingresos</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-blue-500" />
+            <span className="text-xs text-zinc-400">Ganancias</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-violet-500" />

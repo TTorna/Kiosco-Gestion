@@ -17,6 +17,7 @@ async function main() {
     where: { username: 'admin' },
     update: {},
     create: {
+      id: 'cmo912nnb000028rvmkm20qog',
       username: 'admin',
       password: adminPassword,
       role: 'ADMIN',
@@ -27,6 +28,7 @@ async function main() {
     where: { username: 'user' },
     update: {},
     create: {
+      id: 'cmo912nnu000128rvvuje801r',
       username: 'user',
       password: userPassword,
       role: 'USER',
