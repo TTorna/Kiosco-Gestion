@@ -32,6 +32,7 @@ model Product {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   saleItems   SaleItem[]
+  promotions  Promotion[]
 }
 
 model Sale {
@@ -55,3 +56,26 @@ model SaleItem {
   quantity  Int
   subtotal  Float
 }
+
+enum PromoType {
+  BUY_X_PAY_Y
+  QUANTITY_FIXED_PRICE
+}
+
+model Promotion {
+  id              String    @id @default(cuid())
+  name            String
+  isActive        Boolean   @default(true)
+  type            PromoType
+  
+  productId       String
+  product         Product   @relation(fields: [productId], references: [id])
+  
+  buyQuantity     Int
+  payQuantity     Int?
+  fixedPrice      Float?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+

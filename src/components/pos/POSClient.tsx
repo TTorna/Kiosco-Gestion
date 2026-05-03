@@ -17,6 +17,8 @@ interface POSProduct {
 interface CartItem extends POSProduct {
   quantity: number
   subtotal: number
+  originalSubtotal?: number
+  discountDescription?: string
 }
 
 interface TicketData {
@@ -29,14 +31,49 @@ interface TicketData {
 
 interface POSClientProps {
   initialProducts: POSProduct[]
+  activePromotions?: any[]
 }
 
-export default function POSClient({ initialProducts }: POSClientProps) {
+export default function POSClient({ initialProducts, activePromotions = [] }: POSClientProps) {
   const [cart, setCart] = useState<CartItem[]>([])
   const [loading, setLoading] = useState(false)
   const [products] = useState<POSProduct[]>(initialProducts)
   const [ticket, setTicket] = useState<TicketData | null>(null)
   const ticketRef = useRef<HTMLDivElement>(null)
+
+  const applyPromotions = (items: CartItem[]) => {
+    return items.map(item => {
+      let subtotal = item.quantity * item.sellPrice
+      let originalSubtotal = subtotal
+      let discountDescription = undefined
+
+      const promo = activePromotions.find(p => p.productId === item.id)
+      if (promo) {
+        if (promo.type === 'BUY_X_PAY_Y' && promo.buyQuantity && promo.payQuantity) {
+          const promoGroups = Math.floor(item.quantity / promo.buyQuantity)
+          const remainder = item.quantity % promo.buyQuantity
+          if (promoGroups > 0) {
+            subtotal = (promoGroups * promo.payQuantity * item.sellPrice) + (remainder * item.sellPrice)
+            discountDescription = `Promo ${promo.name} Aplicada`
+          }
+        } else if (promo.type === 'QUANTITY_FIXED_PRICE' && promo.buyQuantity && promo.fixedPrice) {
+          const promoGroups = Math.floor(item.quantity / promo.buyQuantity)
+          const remainder = item.quantity % promo.buyQuantity
+          if (promoGroups > 0) {
+            subtotal = (promoGroups * promo.fixedPrice) + (remainder * item.sellPrice)
+            discountDescription = `Promo ${promo.name} Aplicada`
+          }
+        }
+      }
+
+      return {
+        ...item,
+        subtotal,
+        originalSubtotal: subtotal !== originalSubtotal ? originalSubtotal : undefined,
+        discountDescription
+      }
+    })
+  }
 
   const handleScan = (barcode: string) => {
     const product = products.find((p: any) =>
@@ -47,16 +84,19 @@ export default function POSClient({ initialProducts }: POSClientProps) {
       if (product.stock <= 0) { alert(`Sin stock: ${product.name}`); return }
 
       setCart((prev: any[]) => {
+        let newCart;
         const existing = prev.find((i: any) => i.id === product.id)
         if (existing) {
           if (existing.quantity >= product.stock) { alert(`Stock máximo: ${product.stock}`); return prev }
-          return prev.map((i: any) =>
+          newCart = prev.map((i: any) =>
             i.id === product.id
-              ? { ...i, quantity: i.quantity + 1, subtotal: (i.quantity + 1) * i.sellPrice }
+              ? { ...i, quantity: i.quantity + 1 }
               : i
           )
+        } else {
+          newCart = [...prev, { ...product, quantity: 1, subtotal: product.sellPrice }]
         }
-        return [...prev, { ...product, quantity: 1, subtotal: product.sellPrice }]
+        return applyPromotions(newCart)
       })
     } else {
       alert('Producto no encontrado')
@@ -64,13 +104,16 @@ export default function POSClient({ initialProducts }: POSClientProps) {
   }
 
   const updateQuantity = (id: string, delta: number) => {
-    setCart((prev: any[]) => prev.flatMap((item: any) => {
-      if (item.id !== id) return [item]
-      const newQty = item.quantity + delta
-      if (newQty <= 0) return []
-      if (newQty > item.stock) { alert(`Stock disponible: ${item.stock}`); return [item] }
-      return [{ ...item, quantity: newQty, subtotal: newQty * item.sellPrice }]
-    }))
+    setCart((prev: any[]) => {
+      const newCart = prev.flatMap((item: any) => {
+        if (item.id !== id) return [item]
+        const newQty = item.quantity + delta
+        if (newQty <= 0) return []
+        if (newQty > item.stock) { alert(`Stock disponible: ${item.stock}`); return [item] }
+        return [{ ...item, quantity: newQty }]
+      })
+      return applyPromotions(newCart)
+    })
   }
 
   const removeItem = (id: string) => setCart(prev => prev.filter(i => i.id !== id))
@@ -238,6 +281,11 @@ export default function POSClient({ initialProducts }: POSClientProps) {
                     <div style={{ fontSize: 9, color: '#666', paddingLeft: 4, marginBottom: 2 }}>
                       ${item.sellPrice.toFixed(2)} c/u
                     </div>
+                    {item.discountDescription && (
+                      <div style={{ fontSize: 9, fontWeight: 'bold', paddingLeft: 4, marginBottom: 2 }}>
+                        * {item.discountDescription}
+                      </div>
+                    )}
                   </div>
                 ))}
 
@@ -322,6 +370,11 @@ export default function POSClient({ initialProducts }: POSClientProps) {
                     <div className="flex-1 min-w-0">
                       <h3 className="font-bold text-white text-base truncate">{item.name}</h3>
                       <div className="text-xs text-zinc-500 font-mono mt-0.5">${item.sellPrice.toFixed(2)} c/u</div>
+                      {item.discountDescription && (
+                        <div className="text-[10px] text-emerald-400 font-bold mt-1 bg-emerald-500/10 inline-block px-1.5 py-0.5 rounded">
+                          🏷️ {item.discountDescription}
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-3 ml-3 shrink-0">
@@ -335,7 +388,12 @@ export default function POSClient({ initialProducts }: POSClientProps) {
                         </Button>
                       </div>
 
-                      <span className="font-bold text-lg text-emerald-400 w-20 text-right">${item.subtotal.toFixed(2)}</span>
+                      <div className="flex flex-col items-end w-24">
+                        {item.originalSubtotal && (
+                          <span className="text-xs text-zinc-500 line-through">${item.originalSubtotal.toFixed(2)}</span>
+                        )}
+                        <span className="font-bold text-lg text-emerald-400 text-right">${item.subtotal.toFixed(2)}</span>
+                      </div>
 
                       <Button variant="ghost" size="icon" className="h-9 w-9 text-zinc-500 hover:text-destructive hover:bg-destructive/10 rounded-xl" onClick={() => removeItem(item.id)}>
                         <Trash2 className="h-4 w-4" />
@@ -365,7 +423,12 @@ export default function POSClient({ initialProducts }: POSClientProps) {
                   {cart.map(item => (
                     <div key={item.id} className="flex justify-between text-sm text-zinc-400">
                       <span className="truncate flex-1 mr-2">{item.name} ×{item.quantity}</span>
-                      <span className="shrink-0">${item.subtotal.toFixed(2)}</span>
+                      <div className="flex flex-col items-end">
+                        {item.originalSubtotal && (
+                          <span className="text-[10px] text-zinc-500 line-through">${item.originalSubtotal.toFixed(2)}</span>
+                        )}
+                        <span className="shrink-0">${item.subtotal.toFixed(2)}</span>
+                      </div>
                     </div>
                   ))}
                 </>

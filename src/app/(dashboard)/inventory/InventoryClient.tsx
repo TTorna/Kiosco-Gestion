@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { ProductTable, Product } from '@/components/inventory/ProductTable'
 import { ProductForm, ProductFormValues } from '@/components/inventory/ProductForm'
 import { Button } from '@/components/ui/button'
@@ -28,7 +28,10 @@ function InventoryClientInner({ userRole }: { userRole: "ADMIN" | "USER" }) {
   const [priceField, setPriceField] = useState<'sellPrice' | 'costPrice' | 'both'>('sellPrice')
   const [applyToFiltered, setApplyToFiltered] = useState(false)
   const [showLowStock, setShowLowStock] = useState(false)
+  const [isImporting, setIsImporting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const queryClientHook = useQueryClient()
+  const [visibleCount, setVisibleCount] = useState(20)
 
   const { data: products = [], isLoading } = useQuery<Product[]>({
     queryKey: ['products'],
@@ -65,6 +68,12 @@ function InventoryClientInner({ userRole }: { userRole: "ADMIN" | "USER" }) {
     }
     return result
   }, [products, selectedCategories, searchQuery, showLowStock])
+
+  useEffect(() => {
+    setVisibleCount(20)
+  }, [searchQuery, selectedCategories, showLowStock])
+
+  const displayedProducts = filteredProducts.slice(0, visibleCount)
 
   const toggleCategory = (cat: string) => {
     setSelectedCategories((prev: string[]) =>
@@ -169,6 +178,31 @@ function InventoryClientInner({ userRole }: { userRole: "ADMIN" | "USER" }) {
 
   const handleEdit = (product: Product) => { setEditingProduct(product); setShowForm(true) }
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsImporting(true)
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      const res = await fetch('/api/products/import', {
+        method: 'POST',
+        body: formData
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error al importar')
+      alert('✅ ' + data.message)
+      queryClientHook.invalidateQueries({ queryKey: ['products'] })
+    } catch (error: any) {
+      alert('Error: ' + error.message)
+    } finally {
+      setIsImporting(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   if (isLoading) {
     return <div className="flex h-64 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
   }
@@ -243,6 +277,15 @@ function InventoryClientInner({ userRole }: { userRole: "ADMIN" | "USER" }) {
             </div>
             {userRole === 'ADMIN' && (
               <div className="flex gap-2 w-full sm:w-auto">
+                <input type="file" accept=".csv" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
+                <Button
+                  variant="outline"
+                  disabled={isImporting}
+                  className="flex-1 sm:flex-none h-12 rounded-xl border-white/10 bg-transparent hover:bg-white/5 gap-2"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4" />} Importar CSV
+                </Button>
                 <Button
                   variant="outline"
                   className={`flex-1 sm:flex-none h-12 rounded-xl border-white/10 bg-transparent hover:bg-white/5 gap-2 ${showPricePanel ? 'border-primary text-primary' : ''}`}
@@ -424,12 +467,23 @@ function InventoryClientInner({ userRole }: { userRole: "ADMIN" | "USER" }) {
             </div>
           )}
           <ProductTable
-            products={filteredProducts}
+            products={displayedProducts}
             userRole={userRole}
             onEdit={handleEdit}
             onDelete={handleDelete}
             onSell={() => window.location.href = '/pos'}
           />
+          {visibleCount < filteredProducts.length && (
+            <div className="p-4 flex justify-center border-t border-white/5 bg-zinc-900/20">
+              <Button
+                variant="outline"
+                onClick={() => setVisibleCount(v => v + 20)}
+                className="rounded-xl border-white/10 hover:bg-white/5 shadow-lg"
+              >
+                Cargar más productos ({filteredProducts.length - visibleCount} ocultos)
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

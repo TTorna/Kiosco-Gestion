@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 
         const sales = await prisma.sale.findMany({
           where: { createdAt: { gte: from, lte: to } },
-          include: { items: true }
+          include: { items: { include: { product: { select: { costPrice: true } } } } }
         })
 
         let revenue = 0
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
         sales.forEach(sale => {
           revenue += sale.total
           sale.items.forEach(item => {
-            const cost = item.costPrice ?? 0
+            const cost = item.product?.costPrice ?? 0
             profit += (item.price - cost) * item.quantity
           })
         })
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
 
         const sales = await prisma.sale.findMany({
           where: { createdAt: { gte: from, lte: to } },
-          include: { items: true }
+          include: { items: { include: { product: { select: { costPrice: true } } } } }
         })
 
         let revenue = 0
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
         sales.forEach(sale => {
           revenue += sale.total
           sale.items.forEach(item => {
-            const cost = item.costPrice ?? 0
+            const cost = item.product?.costPrice ?? 0
             profit += (item.price - cost) * item.quantity
           })
         })

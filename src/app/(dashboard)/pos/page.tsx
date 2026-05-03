@@ -25,6 +25,10 @@ export default async function POSPage() {
     }
   })
 
+  const promotions = await prisma.promotion.findMany({
+    where: { isActive: true }
+  })
+
   return (
     <div className="h-full flex flex-col">
       <div className="mb-6">
@@ -33,7 +37,7 @@ export default async function POSPage() {
       </div>
       
       <div className="flex-1 min-h-[500px]">
-        <POSClient initialProducts={products} />
+        <POSClient initialProducts={products} activePromotions={promotions} />
       </div>
     </div>
   )

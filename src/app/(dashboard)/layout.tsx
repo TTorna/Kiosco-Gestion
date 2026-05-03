@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
-import { PackageOpen, LayoutDashboard, ShoppingCart, LogOut, Package } from "lucide-react"
+import { PackageOpen, LayoutDashboard, ShoppingCart, LogOut, Package, Tag } from "lucide-react"
 import { auth, signOut } from "@/lib/auth"
 import Link from "next/link"
 
@@ -43,6 +43,13 @@ export default async function DashboardLayout({
             <Package className="h-5 w-5" />
             <span className="hidden md:inline">Inventario</span>
           </Link>
+
+          {isAdmin && (
+            <Link href="/promotions" className="flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-300 hover:text-white hover:bg-white/5 transition-colors font-medium">
+              <Tag className="h-5 w-5" />
+              <span className="hidden md:inline">Promociones</span>
+            </Link>
+          )}
         </nav>
 
         <div className="p-6 mt-auto border-t border-white/5">
