@@ -68,8 +68,7 @@ model Promotion {
   isActive        Boolean   @default(true)
   type            PromoType
   
-  productId       String
-  product         Product   @relation(fields: [productId], references: [id])
+  products        Product[]
   
   buyQuantity     Int
   payQuantity     Int?

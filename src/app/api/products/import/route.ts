@@ -25,16 +25,24 @@ export async function POST(req: NextRequest) {
       console.error("Papa Parse errors:", result.errors);
       // We'll continue anyway as it might just be a formatting issue on a few rows
     }
+    
+    console.log("Primer fila parseada:", result.data[0]);
 
     const products = result.data as any[];
     let count = 0;
 
     for (const row of products) {
-      const name = row.Nombre || row.name || row.Name;
+      // Normalizar las llaves de la fila (todo a minúsculas y sin espacios extra)
+      const normalizedRow: any = {};
+      for (const key in row) {
+        normalizedRow[key.trim().toLowerCase()] = row[key];
+      }
+
+      const name = normalizedRow.nombre || normalizedRow.name;
       if (!name) continue;
 
-      const category = row.Categoria || row.category || row.Category || "";
-      const barcode = row.Barcode || row.barcode || row.Codigo || null;
+      const category = normalizedRow.categoria || normalizedRow.category || "";
+      const barcode = normalizedRow.barcode || normalizedRow.barra || normalizedRow.codigo || null;
       
       const parsePrice = (val: any) => {
         if (!val) return 0;
@@ -42,8 +50,8 @@ export async function POST(req: NextRequest) {
         return parseFloat(str) || 0;
       };
 
-      const costPrice = parsePrice(row.Costo || row.costPrice || 0);
-      const sellPrice = parsePrice(row.Precio || row.sellPrice || 0);
+      const costPrice = parsePrice(normalizedRow.costo || normalizedRow.costprice || 0);
+      const sellPrice = parsePrice(normalizedRow.precio || normalizedRow.sellprice || 0);
 
       // If barcode exists, try to update
       if (barcode) {

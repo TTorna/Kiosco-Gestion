@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Tag, PlusCircle, Loader2, Trash2, Edit2, Info } from 'lucide-react'
+import { Tag, PlusCircle, Loader2, Trash2, Edit2, Info, X } from 'lucide-react'
 
 const queryClient = new QueryClient()
 
@@ -21,9 +21,10 @@ function PromotionsClient() {
   const queryClientHook = useQueryClient()
 
   // Form State
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [type, setType] = useState('BUY_X_PAY_Y')
-  const [productId, setProductId] = useState('')
+  const [productIds, setProductIds] = useState<string[]>([])
   const [productSearch, setProductSearch] = useState('')
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [buyQuantity, setBuyQuantity] = useState(3)
@@ -76,10 +77,41 @@ function PromotionsClient() {
     onError: (err: any) => alert(err.message)
   })
 
+  const updatePromo = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch(`/api/promotions/${data.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      if (!res.ok) throw new Error('Error updating promo')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClientHook.invalidateQueries({ queryKey: ['promotions'] })
+      setShowForm(false)
+      resetForm()
+    },
+    onError: (err: any) => alert(err.message)
+  })
+
+  const handleEdit = (p: any) => {
+    setEditingId(p.id)
+    setName(p.name)
+    setType(p.type)
+    setProductIds(p.products?.map((prod: any) => prod.id) || [])
+    setBuyQuantity(p.buyQuantity)
+    setPayQuantity(p.payQuantity || 2)
+    setFixedPrice(p.fixedPrice || 0)
+    setIsActive(p.isActive)
+    setShowForm(true)
+  }
+
   const resetForm = () => {
+    setEditingId(null)
     setName('')
     setType('BUY_X_PAY_Y')
-    setProductId('')
+    setProductIds([])
     setBuyQuantity(3)
     setPayQuantity(2)
     setFixedPrice(0)
@@ -88,7 +120,7 @@ function PromotionsClient() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name || !productId) return alert('Completa nombre y producto')
+    if (!name || productIds.length === 0) return alert('Completa nombre y selecciona al menos un producto')
     
     if (type === 'BUY_X_PAY_Y') {
       if (buyQuantity <= 1 || payQuantity >= buyQuantity || payQuantity <= 0) {
@@ -100,9 +132,15 @@ function PromotionsClient() {
       }
     }
 
-    createPromo.mutate({
-      name, type, productId, buyQuantity, payQuantity, fixedPrice, isActive
-    })
+    if (editingId) {
+      updatePromo.mutate({
+        id: editingId, name, type, productIds, buyQuantity, payQuantity, fixedPrice, isActive
+      })
+    } else {
+      createPromo.mutate({
+        name, type, productIds, buyQuantity, payQuantity, fixedPrice, isActive
+      })
+    }
   }
 
   if (loadingPromos || loadingProducts) {
@@ -142,7 +180,11 @@ function PromotionsClient() {
                   {promotions.map((p: any) => (
                     <tr key={p.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                       <td className="px-6 py-4 font-bold">{p.name}</td>
-                      <td className="px-6 py-4">{p.product?.name}</td>
+                      <td className="px-6 py-4">
+                        <div className="max-w-[200px] truncate" title={p.products?.map((prod:any) => prod.name).join(', ')}>
+                          {p.products?.length} producto(s): {p.products?.map((prod:any) => prod.name).join(', ')}
+                        </div>
+                      </td>
                       <td className="px-6 py-4">
                         {p.type === 'BUY_X_PAY_Y' ? (
                           <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs font-bold">Llevá {p.buyQuantity} Pagá {p.payQuantity}</span>
@@ -158,6 +200,9 @@ function PromotionsClient() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-right">
+                        <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white hover:bg-white/10 rounded-xl mr-2" onClick={() => handleEdit(p)}>
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/20 rounded-xl" onClick={() => {
                           if (confirm('Eliminar promoción?')) deletePromo.mutate(p.id)
                         }}>
@@ -177,7 +222,7 @@ function PromotionsClient() {
             <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
               <Tag className="h-5 w-5" />
             </div>
-            <h2 className="text-2xl font-bold">Nueva Promoción</h2>
+            <h2 className="text-2xl font-bold">{editingId ? 'Editar Promoción' : 'Nueva Promoción'}</h2>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -187,15 +232,25 @@ function PromotionsClient() {
             </div>
 
             <div className="space-y-2 relative">
-              <label className="text-sm font-medium text-zinc-400">Producto asociado</label>
+              <label className="text-sm font-medium text-zinc-400">Productos asociados</label>
               
-              {productId ? (
-                <div className="flex items-center justify-between w-full h-12 bg-primary/20 border border-primary/50 rounded-xl px-3 text-white">
-                  <span className="truncate font-bold">{products.find((p:any) => p.id === productId)?.name}</span>
-                  <button type="button" onClick={() => { setProductId(''); setProductSearch(''); }} className="text-primary hover:text-white text-sm font-bold bg-black/20 px-3 py-1 rounded-lg">Cambiar</button>
+              {productIds.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {productIds.map(id => {
+                    const prod = products.find((p:any) => p.id === id)
+                    return (
+                      <div key={id} className="flex items-center gap-2 bg-primary/20 border border-primary/50 rounded-xl px-3 py-1.5 text-white text-sm">
+                        <span className="font-bold">{prod?.name}</span>
+                        <button type="button" onClick={() => setProductIds(prev => prev.filter(p => p !== id))} className="text-primary hover:text-white">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )
+                  })}
                 </div>
-              ) : (
-                <div className="relative">
+              )}
+              
+              <div className="relative">
                   <Input 
                     value={productSearch} 
                     onChange={e => {
@@ -218,7 +273,9 @@ function PromotionsClient() {
                           <div 
                             key={p.id} 
                             onClick={() => {
-                              setProductId(p.id)
+                              if (!productIds.includes(p.id)) {
+                                setProductIds(prev => [...prev, p.id])
+                              }
                               setProductSearch('')
                               setIsDropdownOpen(false)
                             }}
@@ -241,8 +298,7 @@ function PromotionsClient() {
                     </div>
                   )}
                 </div>
-              )}
-            </div>
+              </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-zinc-400">Tipo de Promo</label>
@@ -294,8 +350,8 @@ function PromotionsClient() {
               <Button type="button" variant="outline" className="flex-1 h-12 rounded-xl" onClick={() => setShowForm(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={createPromo.isPending} className="flex-1 h-12 rounded-xl font-bold shadow-lg shadow-primary/20">
-                {createPromo.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Guardar Promoción'}
+              <Button type="submit" disabled={createPromo.isPending || updatePromo.isPending} className="flex-1 h-12 rounded-xl font-bold shadow-lg shadow-primary/20">
+                {createPromo.isPending || updatePromo.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : (editingId ? 'Actualizar Promoción' : 'Guardar Promoción')}
               </Button>
             </div>
           </form>

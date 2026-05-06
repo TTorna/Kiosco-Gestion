@@ -42,37 +42,71 @@ export default function POSClient({ initialProducts, activePromotions = [] }: PO
   const ticketRef = useRef<HTMLDivElement>(null)
 
   const applyPromotions = (items: CartItem[]) => {
-    return items.map(item => {
-      let subtotal = item.quantity * item.sellPrice
-      let originalSubtotal = subtotal
-      let discountDescription = undefined
+    let processedItems = items.map(item => ({
+      ...item,
+      subtotal: item.quantity * item.sellPrice,
+      originalSubtotal: item.quantity * item.sellPrice,
+      discountDescription: undefined as string | undefined
+    }))
 
-      const promo = activePromotions.find(p => p.productId === item.id)
-      if (promo) {
-        if (promo.type === 'BUY_X_PAY_Y' && promo.buyQuantity && promo.payQuantity) {
-          const promoGroups = Math.floor(item.quantity / promo.buyQuantity)
-          const remainder = item.quantity % promo.buyQuantity
-          if (promoGroups > 0) {
-            subtotal = (promoGroups * promo.payQuantity * item.sellPrice) + (remainder * item.sellPrice)
-            discountDescription = `Promo ${promo.name} Aplicada`
+    const discountedItemIds = new Set<string>()
+
+    activePromotions.forEach(promo => {
+      const matchingCartItems = processedItems.filter(item => 
+        !discountedItemIds.has(item.id) && 
+        promo.products?.some((p: any) => p.id === item.id)
+      )
+
+      if (matchingCartItems.length === 0) return
+
+      const totalQuantity = matchingCartItems.reduce((acc, item) => acc + item.quantity, 0)
+      const promoGroups = Math.floor(totalQuantity / promo.buyQuantity)
+
+      if (promoGroups > 0) {
+        let units = matchingCartItems.flatMap(item => 
+          Array.from({ length: item.quantity }).map(() => ({
+            id: item.id,
+            price: item.sellPrice,
+            finalPrice: item.sellPrice
+          }))
+        )
+
+        units.sort((a, b) => b.price - a.price)
+        const totalPromoItems = promoGroups * promo.buyQuantity
+
+        if (promo.type === 'BUY_X_PAY_Y' && promo.payQuantity) {
+          const freeItemsCount = promoGroups * (promo.buyQuantity - promo.payQuantity)
+          for (let i = 0; i < totalPromoItems; i++) {
+            if (i >= totalPromoItems - freeItemsCount) {
+              units[i].finalPrice = 0
+            }
           }
-        } else if (promo.type === 'QUANTITY_FIXED_PRICE' && promo.buyQuantity && promo.fixedPrice) {
-          const promoGroups = Math.floor(item.quantity / promo.buyQuantity)
-          const remainder = item.quantity % promo.buyQuantity
-          if (promoGroups > 0) {
-            subtotal = (promoGroups * promo.fixedPrice) + (remainder * item.sellPrice)
-            discountDescription = `Promo ${promo.name} Aplicada`
+        } else if (promo.type === 'QUANTITY_FIXED_PRICE' && promo.fixedPrice) {
+          const fixedPricePerUnit = promo.fixedPrice / promo.buyQuantity
+          for (let i = 0; i < totalPromoItems; i++) {
+            units[i].finalPrice = fixedPricePerUnit
           }
         }
-      }
 
-      return {
-        ...item,
-        subtotal,
-        originalSubtotal: subtotal !== originalSubtotal ? originalSubtotal : undefined,
-        discountDescription
+        matchingCartItems.forEach(cartItem => {
+          const itemUnits = units.filter(u => u.id === cartItem.id)
+          const newSubtotal = itemUnits.reduce((acc, u) => acc + u.finalPrice, 0)
+          
+          const isInPromoGroup = units.slice(0, totalPromoItems).some(u => u.id === cartItem.id)
+          
+          if (isInPromoGroup) {
+            cartItem.subtotal = newSubtotal
+            cartItem.discountDescription = `Promo ${promo.name} Aplicada`
+            discountedItemIds.add(cartItem.id)
+          }
+        })
       }
     })
+
+    return processedItems.map(item => ({
+      ...item,
+      originalSubtotal: item.subtotal !== item.originalSubtotal ? item.originalSubtotal : undefined
+    }))
   }
 
   const handleScan = (barcode: string) => {

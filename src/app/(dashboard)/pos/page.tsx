@@ -26,7 +26,12 @@ export default async function POSPage() {
   })
 
   const promotions = await prisma.promotion.findMany({
-    where: { isActive: true }
+    where: { isActive: true },
+    include: {
+      products: {
+        select: { id: true }
+      }
+    }
   })
 
   return (

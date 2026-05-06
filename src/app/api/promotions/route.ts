@@ -9,8 +9,8 @@ export async function GET(req: NextRequest) {
 
     const promotions = await prisma.promotion.findMany({
       include: {
-        product: {
-          select: { name: true, sellPrice: true }
+        products: {
+          select: { id: true, name: true, sellPrice: true }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -35,10 +35,12 @@ export async function POST(req: NextRequest) {
         name: data.name,
         isActive: data.isActive ?? true,
         type: data.type,
-        productId: data.productId,
         buyQuantity: data.buyQuantity,
         payQuantity: data.payQuantity || null,
         fixedPrice: data.fixedPrice || null,
+        products: {
+          connect: data.productIds?.map((id: string) => ({ id })) || []
+        }
       }
     })
     

@@ -17,10 +17,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         name: data.name,
         isActive: data.isActive,
         type: data.type,
-        productId: data.productId,
         buyQuantity: data.buyQuantity,
         payQuantity: data.payQuantity || null,
         fixedPrice: data.fixedPrice || null,
+        products: {
+          set: data.productIds?.map((id: string) => ({ id })) || []
+        }
       }
     })
     
